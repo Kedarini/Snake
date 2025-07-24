@@ -54,6 +54,7 @@ apple_img = load_scaled_image("Resources/apple.png")
 snake_head_img = load_scaled_image("Resources/snakehead.png")
 snake_body_img = load_scaled_image("Resources/snakebody.png")
 snake_back_img = load_scaled_image("Resources/snakeback.png")
+snake_corner_img = load_scaled_image("Resources/snakecorner_rt.png")
 
 # Initial rotated head
 rotated_head = snake_head_img
@@ -96,6 +97,20 @@ def rotate_head():
         rotated_head = pygame.transform.rotate(snake_head_img, 90)
     elif snake_direction == "DOWN":
         rotated_head = pygame.transform.rotate(snake_head_img, 270)
+
+
+def get_direction(pos1, pos2):
+    delta_x = pos2[0] - pos1[0]
+    delta_y = pos2[1] - pos1[1]
+    if delta_x > 0:
+        return "RIGHT"
+    elif delta_x < 0:
+        return "LEFT"
+    elif delta_y > 0:
+        return "DOWN"
+    elif delta_y < 0:
+        return "UP"
+    return None
 
 
 # Main game loop
@@ -150,9 +165,47 @@ while running:
         if i == 0:
             screen.blit(rotated_head, part)  # Head
         elif i == len(snake_body) - 1:
-            screen.blit(snake_back_img, part)  # Tail
+            # Tail direction can be based on last two segments
+            tail_dir = get_direction(snake_body[-1], snake_body[-2])
+            tail_img = pygame.transform.rotate(
+                snake_back_img,
+                {"RIGHT": 0, "DOWN": 270, "LEFT": 180, "UP": 90}[tail_dir],
+            )
+            screen.blit(tail_img, part)
         else:
-            screen.blit(snake_body_img, part)  # Body
+            prev = snake_body[i - 1]
+            curr = snake_body[i]
+            next_ = snake_body[i + 1]
+
+            dir1 = get_direction(curr, prev)
+            dir2 = get_direction(curr, next_)
+
+            # Straight segment (horizontal or vertical)
+            if (dir1 == dir2) or (dir1, dir2) in [
+                ("LEFT", "RIGHT"),
+                ("RIGHT", "LEFT"),
+                ("UP", "DOWN"),
+                ("DOWN", "UP"),
+            ]:
+                angle = {"RIGHT": 0, "LEFT": 180, "UP": 90, "DOWN": 270}[dir1]
+                body_img = pygame.transform.rotate(snake_body_img, angle)
+                screen.blit(body_img, part)
+            else:
+                # Corner segment
+                key = (dir1, dir2)
+                angle_map = {
+                    ("UP", "RIGHT"): 0,
+                    ("RIGHT", "UP"): 0,
+                    ("RIGHT", "DOWN"): 270,
+                    ("DOWN", "RIGHT"): 270,
+                    ("DOWN", "LEFT"): 180,
+                    ("LEFT", "DOWN"): 180,
+                    ("LEFT", "UP"): 90,
+                    ("UP", "LEFT"): 90,
+                }
+                angle = angle_map.get(key, 0)
+                corner_img = pygame.transform.rotate(snake_corner_img, angle)
+                screen.blit(corner_img, part)
 
     # Draw apple
     screen.blit(apple_img, apple_pos)
